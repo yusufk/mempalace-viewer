@@ -24,7 +24,7 @@ def get_structure():
     return tree
 
 
-def get_drawers(wing=None, room=None, limit=50, offset=0):
+def get_drawers(wing=None, room=None, limit=2500, offset=0):
     """Return drawers with content, optionally filtered."""
     where = {}
     if wing and room:

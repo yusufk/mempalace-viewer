@@ -243,9 +243,9 @@ function MansionScene({ structure, drawers, selected, onDrawerClick }) {
       <WireLine points={[[-1.2, 2.8, 4], [0, 3.5, 4], [1.2, 2.8, 4]]} color={BG} width={1.5} opacity={0.6} />
       <Text position={[0, 3.8, 4]} fontSize={0.18} color={BD} anchorX="center">ENTRANCE</Text>
 
-      {/* Curved staircases — left sweeps along -X wall, right along +X wall */}
-      <CurvedStaircase center={[-3.5, 0]} radius={2.5} startAngle={0} endAngle={Math.PI} />
-      <CurvedStaircase center={[3.5, 0]} radius={2.5} startAngle={Math.PI} endAngle={0} />
+      {/* Curved staircases — left starts facing entrance (+Z), sweeps back; right mirrors */}
+      <CurvedStaircase center={[-3.5, 0]} radius={2.5} startAngle={Math.PI/2} endAngle={Math.PI*1.5} />
+      <CurvedStaircase center={[3.5, 0]} radius={2.5} startAngle={Math.PI/2} endAngle={-Math.PI/2} />
 
       {/* Second floor gallery (balcony outline) */}
       <WireRect pos={[0, 0]} w={8} d={3} y={3} color={B} opacity={0.25} />

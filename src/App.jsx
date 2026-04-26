@@ -19,6 +19,7 @@ export default function App() {
   useEffect(() => {
     fetch(`${API}/stats`).then(r => r.json()).then(setStats)
     fetch(`${API}/structure`).then(r => r.json()).then(setStructure)
+    fetch(`${API}/drawers?limit=2500`).then(r => r.json()).then(setDrawers)
   }, [])
 
   useEffect(() => {
