@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function Sidebar({ open, onToggle, structure, stats, selected, onSelect, onSearch, searchQuery }) {
+export default function Sidebar({ open, onToggle, structure, stats, selected, onSelect, onSearch, searchQuery, searchResults, onDrawerClick, hiddenWings, onToggleWing }) {
   const [query, setQuery] = useState(searchQuery || '')
 
   const handleKey = (e) => {
@@ -10,7 +10,7 @@ export default function Sidebar({ open, onToggle, structure, stats, selected, on
   return (
     <>
       <button className="sidebar-toggle" onClick={onToggle}>
-        {open ? '◀' : '▶'}
+        {open ? '✕' : '☰'}
       </button>
       <aside className={`sidebar ${open ? '' : 'closed'}`}>
         <div className="sidebar-header">
@@ -24,14 +24,38 @@ export default function Sidebar({ open, onToggle, structure, stats, selected, on
           onChange={e => setQuery(e.target.value)}
           onKeyDown={handleKey}
         />
+
+        {/* Search results */}
+        {searchResults && searchResults.length > 0 && (
+          <div className="search-results">
+            <div className="search-results-header">
+              {searchResults.length} results
+              <button className="search-clear" onClick={() => { setQuery(''); onSearch('') }}>clear</button>
+            </div>
+            {searchResults.map(d => (
+              <div key={d.id} className="search-result-item" onClick={() => onDrawerClick(d)}>
+                <div className="search-result-meta">{d.wing} / {d.room}</div>
+                <div className="search-result-text">{d.content?.slice(0, 120)}…</div>
+                <div className="search-result-score">{(1 - d.distance).toFixed(2)} match</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="wing-list">
           {Object.entries(structure).map(([wing, rooms]) => (
             <div key={wing}>
-              <div
-                className={`wing-item ${selected?.wing === wing && !selected?.room ? 'active' : ''}`}
-                onClick={() => onSelect({ wing, room: null })}
-              >
-                {wing.replace(/_/g, ' ')}
+              <div className={`wing-item ${selected?.wing === wing && !selected?.room ? 'active' : ''}`}>
+                <label className="wing-checkbox" onClick={e => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={!hiddenWings.has(wing)}
+                    onChange={() => onToggleWing(wing)}
+                  />
+                </label>
+                <span onClick={() => onSelect({ wing, room: null })}>
+                  {wing.replace(/_/g, ' ')}
+                </span>
               </div>
               {Object.entries(rooms).map(([room, count]) => (
                 <div
