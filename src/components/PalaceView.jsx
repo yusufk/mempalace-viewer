@@ -96,11 +96,14 @@ function RoomBox({ pos, w, d, h = 3, y = 0, label }) {
   ]
   return (
     <group>
-      <WireRect pos={pos} w={w} d={d} y={y} color={BD} opacity={0.35} />
+      {/* Floor outline */}
+      <WireRect pos={pos} w={w} d={d} y={y} color={B} opacity={0.5} />
+      {/* Ceiling */}
       <WireRect pos={pos} w={w} d={d} y={y+h} color={BD} opacity={0.15} />
       {walls.map((pts, i) => <WireLine key={i} points={pts} color={BD} width={0.5} opacity={0.2} />)}
+      {/* Room name on floor */}
       {label && (
-        <Text position={[x, y+h+0.4, z]} fontSize={0.22} color={B} anchorX="center">
+        <Text position={[x, y + 0.03, z]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.28} color={BD} anchorX="center" anchorY="middle">
           {label.replace(/_/g, ' ')}
         </Text>
       )}
@@ -216,9 +219,9 @@ function Floor({ floorIndex, wings, grouped, onDrawerClick, isSearch, totalFloor
       {wings[2] && <Hallway from={[0, -4]} to={[0, -20]} y={y} />}
 
       {/* ── Wing labels ── */}
-      {wings[0] && <Text position={[-5.5, y + 0.02, 1.5]} rotation={[-Math.PI/2,0,0]} fontSize={0.3} color={BG} anchorX="center">{wings[0].name.replace(/_/g,' ').toUpperCase()}</Text>}
-      {wings[1] && <Text position={[5.5, y + 0.02, 1.5]} rotation={[-Math.PI/2,0,0]} fontSize={0.3} color={BG} anchorX="center">{wings[1].name.replace(/_/g,' ').toUpperCase()}</Text>}
-      {wings[2] && <Text position={[0, y + 0.02, -5.5]} rotation={[-Math.PI/2,0,0]} fontSize={0.3} color={BG} anchorX="center">{wings[2].name.replace(/_/g,' ').toUpperCase()}</Text>}
+      {wings[0] && <Text position={[-5.5, y + 0.02, 1.5]} rotation={[-Math.PI/2,0,0]} fontSize={0.4} color="#f6a04d" anchorX="center" fontWeight="bold">{'▸ ' + wings[0].name.replace(/_/g,' ').toUpperCase()}</Text>}
+      {wings[1] && <Text position={[5.5, y + 0.02, 1.5]} rotation={[-Math.PI/2,0,0]} fontSize={0.4} color="#f6a04d" anchorX="center" fontWeight="bold">{'▸ ' + wings[1].name.replace(/_/g,' ').toUpperCase()}</Text>}
+      {wings[2] && <Text position={[0, y + 0.02, -5.5]} rotation={[-Math.PI/2,0,0]} fontSize={0.4} color="#f6a04d" anchorX="center" fontWeight="bold">{'▸ ' + wings[2].name.replace(/_/g,' ').toUpperCase()}</Text>}
 
       {/* ── Rooms ── */}
       {wings.map((wing, wi) => {
