@@ -2,7 +2,7 @@
 
 A 3D blueprint-style viewer for [MemPalace](https://github.com/milla-jovovich/mempalace) — the AI memory system that mines projects and conversations into a searchable palace.
 
-![MemPalace Viewer](https://raw.githubusercontent.com/yusufk/mempalace-viewer/main/screenshot.png)
+![MemPalace Viewer](https://raw.githubusercontent.com/yusufk/mempalace-viewer/main/screenshot.png?v=2)
 
 ## Features
 
