@@ -144,36 +144,65 @@ function DrawerCube({ position, drawer, onClick, isSearch }) {
   )
 }
 
-/* ── Floor: foyer + 3 hallways + up to 3 wings of rooms ── */
+/* ── Floor: foyer + hallways + wings + palace outline ── */
 function Floor({ floorIndex, wings, grouped, onDrawerClick, isSearch, totalFloors }) {
   const y = floorIndex * FLOOR_H
 
+  // Calculate palace extents based on rooms
+  const maxRooms = Math.max(...wings.map(w => Object.keys(w.rooms).length), 1)
+  const extent = 6 + (maxRooms - 1) * 5 + 2 // furthest room edge + margin
+  const wallH = 3.5
+
   return (
     <group>
-      {/* Foyer outline */}
+      {/* ── Palace outer walls ── */}
+      {/* Front wall (with entrance gap on ground floor) */}
+      {floorIndex === 0 ? (
+        <>
+          <WireLine points={[[-extent, y, 5], [-1.5, y, 5]]} color={B} width={1.5} opacity={0.5} />
+          <WireLine points={[[1.5, y, 5], [extent, y, 5]]} color={B} width={1.5} opacity={0.5} />
+          <WireLine points={[[-extent, y+wallH, 5], [extent, y+wallH, 5]]} color={B} width={1} opacity={0.3} />
+          {/* Entrance columns */}
+          <WireLine points={[[-1.5, y, 5], [-1.5, y+wallH, 5]]} color={BG} width={2} opacity={0.8} />
+          <WireLine points={[[1.5, y, 5], [1.5, y+wallH, 5]]} color={BG} width={2} opacity={0.8} />
+          {/* Arch */}
+          <WireLine points={[[-1.5, y+wallH, 5], [0, y+wallH+0.8, 5], [1.5, y+wallH, 5]]} color={BG} width={1.5} opacity={0.6} />
+          <Text position={[0, y+wallH+1.2, 5]} fontSize={0.25} color={BG} anchorX="center">ENTRANCE</Text>
+        </>
+      ) : (
+        <>
+          <WireLine points={[[-extent, y, 5], [extent, y, 5]]} color={B} width={1.5} opacity={0.5} />
+          <WireLine points={[[-extent, y+wallH, 5], [extent, y+wallH, 5]]} color={B} width={1} opacity={0.3} />
+        </>
+      )}
+      {/* Back wall */}
+      <WireLine points={[[-extent, y, -extent], [extent, y, -extent]]} color={B} width={1.5} opacity={0.5} />
+      <WireLine points={[[-extent, y+wallH, -extent], [extent, y+wallH, -extent]]} color={B} width={1} opacity={0.3} />
+      {/* Left wall */}
+      <WireLine points={[[-extent, y, 5], [-extent, y, -extent]]} color={B} width={1.5} opacity={0.5} />
+      <WireLine points={[[-extent, y+wallH, 5], [-extent, y+wallH, -extent]]} color={B} width={1} opacity={0.3} />
+      {/* Right wall */}
+      <WireLine points={[[extent, y, 5], [extent, y, -extent]]} color={B} width={1.5} opacity={0.5} />
+      <WireLine points={[[extent, y+wallH, 5], [extent, y+wallH, -extent]]} color={B} width={1} opacity={0.3} />
+      {/* Corner pillars */}
+      <WireLine points={[[-extent, y, 5], [-extent, y+wallH, 5]]} color={B} width={1} opacity={0.4} />
+      <WireLine points={[[extent, y, 5], [extent, y+wallH, 5]]} color={B} width={1} opacity={0.4} />
+      <WireLine points={[[-extent, y, -extent], [-extent, y+wallH, -extent]]} color={B} width={1} opacity={0.4} />
+      <WireLine points={[[extent, y, -extent], [extent, y+wallH, -extent]]} color={B} width={1} opacity={0.4} />
+
+      {/* ── Foyer ── */}
       <WireRect pos={[0, 0]} w={8} d={8} y={y} color={B} opacity={0.5} />
-      {floorIndex === 0 && (
+      {floorIndex === 0 ? (
         <Text position={[0, y + 0.02, 2]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.6} color={BG} anchorX="center" letterSpacing={0.15}>
           MEMPALACE
         </Text>
-      )}
-      {floorIndex > 0 && (
+      ) : (
         <Text position={[0, y + 0.02, 2]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.4} color={BG} anchorX="center" letterSpacing={0.1}>
           {`FLOOR ${floorIndex + 1}`}
         </Text>
       )}
 
-      {/* Entrance on ground floor */}
-      {floorIndex === 0 && (
-        <>
-          <WireLine points={[[-1.2, 0, 4], [-1.2, 2.8, 4]]} color={BG} width={2} opacity={0.8} />
-          <WireLine points={[[1.2, 0, 4], [1.2, 2.8, 4]]} color={BG} width={2} opacity={0.8} />
-          <WireLine points={[[-1.2, 2.8, 4], [0, 3.5, 4], [1.2, 2.8, 4]]} color={BG} width={1.5} opacity={0.6} />
-          <Text position={[0, 3.8, 4]} fontSize={0.18} color={BD} anchorX="center">ENTRANCE</Text>
-        </>
-      )}
-
-      {/* Staircases to next floor */}
+      {/* ── Staircases ── */}
       {floorIndex < totalFloors - 1 && (
         <>
           <CurvedStaircase center={[-3.5, 0]} radius={2.5} startAngle={Math.PI/2} endAngle={Math.PI*1.5} y0={y} y1={y + FLOOR_H} />
@@ -181,17 +210,17 @@ function Floor({ floorIndex, wings, grouped, onDrawerClick, isSearch, totalFloor
         </>
       )}
 
-      {/* Up to 3 hallways */}
+      {/* ── Hallways ── */}
       {wings[0] && <Hallway from={[-4, 0]} to={[-20, 0]} y={y} />}
       {wings[1] && <Hallway from={[4, 0]} to={[20, 0]} y={y} />}
       {wings[2] && <Hallway from={[0, -4]} to={[0, -20]} y={y} />}
 
-      {/* Wing labels */}
+      {/* ── Wing labels ── */}
       {wings[0] && <Text position={[-5.5, y + 0.02, 1.5]} rotation={[-Math.PI/2,0,0]} fontSize={0.3} color={BG} anchorX="center">{wings[0].name.replace(/_/g,' ').toUpperCase()}</Text>}
       {wings[1] && <Text position={[5.5, y + 0.02, 1.5]} rotation={[-Math.PI/2,0,0]} fontSize={0.3} color={BG} anchorX="center">{wings[1].name.replace(/_/g,' ').toUpperCase()}</Text>}
       {wings[2] && <Text position={[0, y + 0.02, -5.5]} rotation={[-Math.PI/2,0,0]} fontSize={0.3} color={BG} anchorX="center">{wings[2].name.replace(/_/g,' ').toUpperCase()}</Text>}
 
-      {/* Rooms per wing */}
+      {/* ── Rooms ── */}
       {wings.map((wing, wi) => {
         const roomNames = Object.keys(wing.rooms)
         return roomNames.map((room, ri) => {
@@ -212,7 +241,7 @@ function Floor({ floorIndex, wings, grouped, onDrawerClick, isSearch, totalFloor
         })
       })}
 
-      {/* Lights for this floor */}
+      {/* ── Lights ── */}
       <pointLight position={[0, y + 4, 2]} intensity={0.6} color={BG} distance={25} />
       <pointLight position={[-12, y + 3, 0]} intensity={0.3} color="#0a4a6a" distance={20} />
       <pointLight position={[12, y + 3, 0]} intensity={0.3} color="#0a4a6a" distance={20} />
