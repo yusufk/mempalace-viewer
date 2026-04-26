@@ -1,16 +1,70 @@
-# React + Vite
+# MemPalace Viewer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A 3D blueprint-style viewer for [MemPalace](https://github.com/milla-jovovich/mempalace) — the AI memory system that mines projects and conversations into a searchable palace.
 
-Currently, two official plugins are available:
+![MemPalace Viewer](https://raw.githubusercontent.com/yusufk/mempalace-viewer/main/screenshot.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **3D mansion layout** — wings, rooms, hallways, and curved staircases rendered as wireframe blueprints
+- **Multi-floor** — every 3 wings get their own floor, connected by staircases
+- **Interactive drawers** — click any memory cube to read its content in a side panel
+- **Semantic search** — search memories and see results listed in the sidebar + highlighted in 3D
+- **Visibility toggles** — show/hide wings and rooms with checkboxes
+- **Blueprint aesthetic** — dark background, cyan wireframes, fog, grid floor
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Architecture
 
-## Expanding the ESLint configuration
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────────┐
+│  React +    │────▶│  API Server  │────▶│  ChromaDB Palace │
+│  Three.js   │     │  (Python)    │     │  (~/.mempalace/) │
+│  Frontend   │◀────│  port 3001   │◀────│                  │
+└─────────────┘     └──────────────┘     └──────────────────┘
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Frontend**: React + [@react-three/fiber](https://github.com/pmndrs/react-three-fiber) + [@react-three/drei](https://github.com/pmndrs/drei)
+- **API**: Simple Python HTTP server that reads from the ChromaDB palace
+- **Data**: MemPalace ChromaDB database (created by `mempalace mine`)
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) 18+
+- [Python](https://python.org/) 3.10+ with `mempalace` installed (`pip install mempalace`)
+- A mined MemPalace at `~/.mempalace/palace/`
+
+## Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Start the API server (reads from ~/.mempalace/palace)
+python api/server.py &
+
+# Start the dev server
+npm run dev
+```
+
+Open http://localhost:5173
+
+## Configuration
+
+The API server reads from `~/.mempalace/palace` by default. Override with environment variables:
+
+```bash
+PALACE_PATH=/path/to/palace API_PORT=3001 python api/server.py
+```
+
+## API Endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/stats` | Total drawer count + wing/room structure |
+| `GET /api/structure` | Wing → room → count tree |
+| `GET /api/drawers?wing=&room=&limit=` | List drawers, optionally filtered |
+| `GET /api/search?q=&limit=` | Semantic search across all memories |
+
+## License
+
+MIT
