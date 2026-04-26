@@ -86,6 +86,12 @@ export default function App() {
         onDrawerClick={setActiveDrawer}
         hidden={hidden}
         onToggleHidden={toggleHidden}
+        onShowAll={() => setHidden(new Set())}
+        onHideAll={() => {
+          const all = new Set()
+          for (const wing of Object.keys(structure)) all.add(wing)
+          setHidden(all)
+        }}
       />
       <main className={`main ${sidebarOpen ? '' : 'expanded'}`}>
         <PalaceView

@@ -109,13 +109,19 @@ function RoomBox({ pos, w, d, h = 3, y = 0, label }) {
 }
 
 function DrawerWall({ drawers, position, onDrawerClick, isSearch }) {
-  const cols = Math.min(14, Math.ceil(Math.sqrt(drawers.length * 1.5)))
   const sp = 0.2
+  const maxCols = 6   // X axis
+  const maxRows = 6   // Z axis (depth — shelves)
+  const perLayer = maxCols * maxRows
   return (
     <group position={position}>
-      {drawers.map((d, i) => (
-        <DrawerCube key={d.id} position={[(i % cols) * sp, Math.floor(i / cols) * sp, 0]} drawer={d} onClick={onDrawerClick} isSearch={isSearch} />
-      ))}
+      {drawers.map((d, i) => {
+        const layer = Math.floor(i / perLayer)
+        const inLayer = i % perLayer
+        const col = inLayer % maxCols
+        const row = Math.floor(inLayer / maxCols)
+        return <DrawerCube key={d.id} position={[col * sp, layer * sp, row * sp]} drawer={d} onClick={onDrawerClick} isSearch={isSearch} />
+      })}
     </group>
   )
 }
@@ -195,7 +201,8 @@ function Floor({ floorIndex, wings, grouped, onDrawerClick, isSearch, totalFloor
           else { x = (ri % 2 === 0 ? -2.5 : 2.5); z = -6 - Math.floor(ri / 2) * 5 }
 
           const rd = grouped[`${wing.name}/${room}`] || []
-          const h = Math.max(2.5, Math.ceil(rd.length / 14) * 0.2 + 1.5)
+          const layers = Math.ceil(rd.length / 36)
+          const h = Math.max(2.5, layers * 0.2 + 1.5)
           return (
             <group key={`${wing.name}/${room}`}>
               <RoomBox pos={[x, z]} w={4} d={4} h={h} y={y} label={room} />
