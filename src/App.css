@@ -1,0 +1,185 @@
+:root {
+  --bg: #000000;
+  --bg-surface: #040a10;
+  --bg-hover: #0a1a2a;
+  --border: #0d2a3f;
+  --text: #8ec8e8;
+  --text-dim: #3a6080;
+  --accent: #4dc9f6;
+  --accent-dim: #1a5a7b;
+  --danger: #f65e5e;
+  --success: #4df6a6;
+  --sidebar-w: 280px;
+  --font: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root { height: 100vh; }
+
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s;
+  z-index: 10;
+  overflow: hidden;
+}
+.sidebar.closed { transform: translateX(calc(-1 * var(--sidebar-w))); position: absolute; height: 100%; }
+.sidebar-toggle {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-header h1 {
+  font-size: 16px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.sidebar-header .stats {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+.search-box {
+  margin: 12px 16px;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  width: calc(100% - 32px);
+  outline: none;
+}
+.search-box:focus { border-color: var(--accent); }
+.search-box::placeholder { color: var(--text-dim); }
+
+.wing-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.wing-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.wing-item:hover { color: var(--text); }
+.wing-item.active { color: var(--accent); }
+.room-item {
+  padding: 6px 16px 6px 32px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+}
+.room-item:hover { background: var(--bg-hover); }
+.room-item.active { color: var(--accent); background: var(--bg-hover); }
+.room-count {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+/* Main */
+.main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+.main.expanded { margin-left: 0; }
+
+/* 3D Canvas */
+canvas { display: block; }
+
+/* Drawer Panel */
+.drawer-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 420px;
+  height: 100vh;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.2s ease;
+}
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.drawer-panel-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.drawer-panel-header h3 {
+  font-size: 14px;
+  color: var(--accent);
+}
+.drawer-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 18px;
+}
+.drawer-panel-meta {
+  padding: 12px 16px;
+  font-size: 11px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+.drawer-panel-meta span { display: block; margin-bottom: 4px; }
+.drawer-panel-content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
