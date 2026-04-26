@@ -15,7 +15,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [hiddenWings, setHiddenWings] = useState(new Set())
+  const [hidden, setHidden] = useState(new Set()) // "wing" or "wing/room"
 
   useEffect(() => {
     fetch(`${API}/stats`).then(r => r.json()).then(setStats)
@@ -39,26 +39,37 @@ export default function App() {
     setSearchResults(await res.json())
   }
 
-  const toggleWing = (wing) => {
-    setHiddenWings(prev => {
+  const toggleHidden = (key) => {
+    setHidden(prev => {
       const next = new Set(prev)
-      next.has(wing) ? next.delete(wing) : next.add(wing)
+      next.has(key) ? next.delete(key) : next.add(key)
       return next
     })
+  }
+
+  const isHidden = (wing, room) => {
+    if (hidden.has(wing)) return true
+    if (room && hidden.has(`${wing}/${room}`)) return true
+    return false
   }
 
   const visibleStructure = useMemo(() => {
     const s = {}
     for (const [wing, rooms] of Object.entries(structure)) {
-      if (!hiddenWings.has(wing)) s[wing] = rooms
+      if (hidden.has(wing)) continue
+      const visRooms = {}
+      for (const [room, count] of Object.entries(rooms)) {
+        if (!hidden.has(`${wing}/${room}`)) visRooms[room] = count
+      }
+      if (Object.keys(visRooms).length > 0) s[wing] = visRooms
     }
     return s
-  }, [structure, hiddenWings])
+  }, [structure, hidden])
 
   const visibleDrawers = useMemo(() => {
     const source = searchResults || drawers
-    return source.filter(d => !hiddenWings.has(d.wing))
-  }, [searchResults, drawers, hiddenWings])
+    return source.filter(d => !isHidden(d.wing, d.room))
+  }, [searchResults, drawers, hidden])
 
   return (
     <div className="app">
@@ -73,8 +84,8 @@ export default function App() {
         searchQuery={searchQuery}
         searchResults={searchResults}
         onDrawerClick={setActiveDrawer}
-        hiddenWings={hiddenWings}
-        onToggleWing={toggleWing}
+        hidden={hidden}
+        onToggleHidden={toggleHidden}
       />
       <main className={`main ${sidebarOpen ? '' : 'expanded'}`}>
         <PalaceView

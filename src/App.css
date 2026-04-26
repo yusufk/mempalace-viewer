@@ -112,10 +112,12 @@ body {
   cursor: pointer;
   font-size: 13px;
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
 }
 .room-item:hover { background: var(--bg-hover); }
 .room-item.active { color: var(--accent); background: var(--bg-hover); }
+.room-item > span:first-of-type { flex: 1; cursor: pointer; }
 .room-count {
   color: var(--text-dim);
   font-size: 11px;
@@ -188,8 +190,8 @@ canvas { display: block; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 
-/* Wing checkboxes */
-.wing-checkbox input {
+/* Visibility checkboxes */
+.vis-checkbox input {
   accent-color: var(--accent);
   cursor: pointer;
 }

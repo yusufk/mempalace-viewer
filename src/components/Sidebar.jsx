@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function Sidebar({ open, onToggle, structure, stats, selected, onSelect, onSearch, searchQuery, searchResults, onDrawerClick, hiddenWings, onToggleWing }) {
+export default function Sidebar({ open, onToggle, structure, stats, selected, onSelect, onSearch, searchQuery, searchResults, onDrawerClick, hidden, onToggleHidden }) {
   const [query, setQuery] = useState(searchQuery || '')
 
   const handleKey = (e) => {
@@ -25,7 +25,6 @@ export default function Sidebar({ open, onToggle, structure, stats, selected, on
           onKeyDown={handleKey}
         />
 
-        {/* Search results */}
         {searchResults && searchResults.length > 0 && (
           <div className="search-results">
             <div className="search-results-header">
@@ -46,12 +45,8 @@ export default function Sidebar({ open, onToggle, structure, stats, selected, on
           {Object.entries(structure).map(([wing, rooms]) => (
             <div key={wing}>
               <div className={`wing-item ${selected?.wing === wing && !selected?.room ? 'active' : ''}`}>
-                <label className="wing-checkbox" onClick={e => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={!hiddenWings.has(wing)}
-                    onChange={() => onToggleWing(wing)}
-                  />
+                <label className="vis-checkbox" onClick={e => e.stopPropagation()}>
+                  <input type="checkbox" checked={!hidden.has(wing)} onChange={() => onToggleHidden(wing)} />
                 </label>
                 <span onClick={() => onSelect({ wing, room: null })}>
                   {wing.replace(/_/g, ' ')}
@@ -61,9 +56,11 @@ export default function Sidebar({ open, onToggle, structure, stats, selected, on
                 <div
                   key={room}
                   className={`room-item ${selected?.wing === wing && selected?.room === room ? 'active' : ''}`}
-                  onClick={() => onSelect({ wing, room })}
                 >
-                  <span>{room.replace(/_/g, ' ')}</span>
+                  <label className="vis-checkbox" onClick={e => e.stopPropagation()}>
+                    <input type="checkbox" checked={!hidden.has(wing) && !hidden.has(`${wing}/${room}`)} onChange={() => onToggleHidden(`${wing}/${room}`)} />
+                  </label>
+                  <span onClick={() => onSelect({ wing, room })}>{room.replace(/_/g, ' ')}</span>
                   <span className="room-count">{count}</span>
                 </div>
               ))}
