@@ -111,7 +111,7 @@ function RoomBox({ pos, w, d, h = 3, y = 0, label }) {
   )
 }
 
-function DrawerWall({ drawers, position, onDrawerClick, isSearch }) {
+function DrawerWall({ drawers, position, onDrawerClick, isSearch, activeId }) {
   const sp = 0.2
   const maxCols = 6   // X axis
   const maxRows = 6   // Z axis (depth — shelves)
@@ -123,21 +123,22 @@ function DrawerWall({ drawers, position, onDrawerClick, isSearch }) {
         const inLayer = i % perLayer
         const col = inLayer % maxCols
         const row = Math.floor(inLayer / maxCols)
-        return <DrawerCube key={d.id} position={[col * sp, layer * sp, row * sp]} drawer={d} onClick={onDrawerClick} isSearch={isSearch} />
+        return <DrawerCube key={d.id} position={[col * sp, layer * sp, row * sp]} drawer={d} onClick={onDrawerClick} isSearch={isSearch} activeId={activeId} />
       })}
     </group>
   )
 }
 
-function DrawerCube({ position, drawer, onClick, isSearch }) {
+function DrawerCube({ position, drawer, onClick, isSearch, activeId }) {
   const ref = useRef()
   const [hovered, setHovered] = useState(false)
-  const color = isSearch ? '#4df6a6' : B
+  const isActive = drawer.id === activeId
+  const color = isActive ? '#4df6a6' : isSearch ? '#4df6a6' : B
   useFrame(() => {
     if (!ref.current) return
-    const s = hovered ? 1.5 : 1
+    const s = hovered ? 1.5 : isActive ? 1.8 : 1
     ref.current.scale.lerp(new THREE.Vector3(s, s, s), 0.15)
-    ref.current.material.emissiveIntensity = THREE.MathUtils.lerp(ref.current.material.emissiveIntensity, hovered ? 1.5 : 0.25, 0.1)
+    ref.current.material.emissiveIntensity = THREE.MathUtils.lerp(ref.current.material.emissiveIntensity, isActive ? 2.5 : hovered ? 1.5 : 0.25, 0.1)
   })
   return (
     <mesh ref={ref} position={position} onClick={e => { e.stopPropagation(); onClick(drawer) }} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
@@ -148,7 +149,7 @@ function DrawerCube({ position, drawer, onClick, isSearch }) {
 }
 
 /* ── Floor: foyer + hallways + wings + palace outline ── */
-function Floor({ floorIndex, wings, grouped, onDrawerClick, isSearch, totalFloors }) {
+function Floor({ floorIndex, wings, grouped, onDrawerClick, isSearch, totalFloors, activeId }) {
   const y = floorIndex * FLOOR_H
 
   // Calculate palace extents based on rooms
@@ -238,7 +239,7 @@ function Floor({ floorIndex, wings, grouped, onDrawerClick, isSearch, totalFloor
           return (
             <group key={`${wing.name}/${room}`}>
               <RoomBox pos={[x, z]} w={4} d={4} h={h} y={y} label={room} />
-              <DrawerWall drawers={rd} position={[x - 1.3, y + 0.15, z - 1.3]} onDrawerClick={onDrawerClick} isSearch={isSearch} />
+              <DrawerWall drawers={rd} position={[x - 1.3, y + 0.15, z - 1.3]} onDrawerClick={onDrawerClick} isSearch={isSearch} activeId={activeId} />
             </group>
           )
         })
@@ -322,11 +323,7 @@ function ConnectionLines({ connections, drawerPositions }) {
           </group>
         )
       })}
-      {/* Source node - green pulse */}
-      <mesh position={srcPos}>
-        <sphereGeometry args={[0.15]} />
-        <meshBasicMaterial color="#4df6a6" />
-      </mesh>
+      {/* Source node removed — drawer itself glows */}
     </group>
   )
 }
@@ -384,7 +381,7 @@ function MansionScene({ structure, drawers, onDrawerClick, connections }) {
       <fog attach="fog" args={['#000000', 15, 60]} />
 
       {floors.map((wings, fi) => (
-        <Floor key={fi} floorIndex={fi} wings={wings} grouped={grouped} onDrawerClick={onDrawerClick} isSearch={isSearch} totalFloors={floors.length} />
+        <Floor key={fi} floorIndex={fi} wings={wings} grouped={grouped} onDrawerClick={onDrawerClick} isSearch={isSearch} totalFloors={floors.length} activeId={connections?.source?.id} />
       ))}
 
       <gridHelper args={[80, 80, '#071828', '#040e18']} position={[0, -0.02, 0]} />
