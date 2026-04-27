@@ -76,7 +76,7 @@ def find_similar(drawer_id, limit=8):
     src_meta = source["metadatas"][0]
     results = col.query(
         query_texts=[source["documents"][0]],
-        n_results=limit + 5,
+        n_results=limit + 20,
         include=["metadatas", "distances"],
     )
     hits = []

@@ -285,11 +285,11 @@ function ConnectionLines({ connections, structure }) {
         const tgtKey = `${s.wing}/${s.room}`
         const tgtPos = roomPositions[tgtKey]
         if (!tgtPos) return null
-        const mid = [(srcPos[0] + tgtPos[0]) / 2, Math.max(srcPos[1], tgtPos[1]) + 3, (srcPos[2] + tgtPos[2]) / 2]
-        const opacity = Math.max(0.2, 1 - s.distance)
+        const mid = [(srcPos[0] + tgtPos[0]) / 2, Math.max(srcPos[1], tgtPos[1]) + 5, (srcPos[2] + tgtPos[2]) / 2]
+        const opacity = Math.max(0.4, 1 - s.distance * 0.5)
         return (
           <group key={i}>
-            <Line points={[srcPos, mid, tgtPos]} color="#f6a04d" lineWidth={2} transparent opacity={opacity} />
+            <Line points={[srcPos, mid, tgtPos]} color="#f6a04d" lineWidth={3} transparent opacity={opacity} />
             <mesh position={tgtPos}>
               <sphereGeometry args={[0.15]} />
               <meshBasicMaterial color="#f6a04d" transparent opacity={opacity} />
