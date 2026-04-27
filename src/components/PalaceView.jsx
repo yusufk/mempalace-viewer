@@ -253,7 +253,47 @@ function Floor({ floorIndex, wings, grouped, onDrawerClick, isSearch, totalFloor
   )
 }
 
-/* ── Connection lines between drawers ── */
+/* ── Catmull-Rom curve helper ── */
+function curvePoints(src, tgt, segments = 40) {
+  const dx = tgt[0] - src[0], dz = tgt[2] - src[2]
+  const dist = Math.sqrt(dx * dx + dz * dz)
+  const height = Math.max(2, dist * 0.3)
+  // Two control points for an organic S-curve
+  const c1 = [src[0] + dx * 0.25 + dz * 0.15, src[1] + height * 0.7, src[2] + dz * 0.25 - dx * 0.15]
+  const c2 = [src[0] + dx * 0.75 - dz * 0.15, tgt[1] + height, src[2] + dz * 0.75 + dx * 0.15]
+  const pts = []
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments, t2 = t * t, t3 = t2 * t
+    const h1 = 2*t3 - 3*t2 + 1, h2 = t3 - 2*t2 + t, h3 = -2*t3 + 3*t2, h4 = t3 - t2
+    pts.push([
+      h1*src[0] + h2*(c1[0]-src[0])*3 + h3*tgt[0] + h4*(tgt[0]-c2[0])*3,
+      h1*src[1] + h2*(c1[1]-src[1])*3 + h3*tgt[1] + h4*(tgt[1]-c2[1])*3,
+      h1*src[2] + h2*(c1[2]-src[2])*3 + h3*tgt[2] + h4*(tgt[2]-c2[2])*3,
+    ])
+  }
+  return pts
+}
+
+/* ── Animated spark travelling along a filament ── */
+function Spark({ points, speed = 1, color = '#f6a04d', delay = 0 }) {
+  const ref = useRef()
+  useFrame(({ clock }) => {
+    if (!ref.current || points.length < 2) return
+    const t = ((clock.elapsedTime * speed + delay) % 2) / 2 // 0→1 loop
+    const idx = Math.min(Math.floor(t * (points.length - 1)), points.length - 2)
+    const frac = (t * (points.length - 1)) - idx
+    const a = points[idx], b = points[idx + 1]
+    ref.current.position.set(a[0] + (b[0]-a[0])*frac, a[1] + (b[1]-a[1])*frac, a[2] + (b[2]-a[2])*frac)
+  })
+  return (
+    <mesh ref={ref}>
+      <sphereGeometry args={[0.06]} />
+      <meshBasicMaterial color={color} />
+    </mesh>
+  )
+}
+
+/* ── Neuron-style connection lines between drawers ── */
 function ConnectionLines({ connections, drawerPositions }) {
   if (!connections || !connections.similar || !drawerPositions) return null
   const srcPos = drawerPositions[connections.source.id]
@@ -264,18 +304,25 @@ function ConnectionLines({ connections, drawerPositions }) {
       {connections.similar.map((s, i) => {
         const tgtPos = drawerPositions[s.id]
         if (!tgtPos) return null
-        const mid = [(srcPos[0] + tgtPos[0]) / 2, Math.max(srcPos[1], tgtPos[1]) + 4, (srcPos[2] + tgtPos[2]) / 2]
-        const opacity = Math.max(0.4, 1 - s.distance * 0.5)
+        const pts = curvePoints(srcPos, tgtPos)
+        const strength = Math.max(0.3, 1 - s.distance * 0.6)
         return (
           <group key={i}>
-            <Line points={[srcPos, mid, tgtPos]} color="#f6a04d" lineWidth={3} transparent opacity={opacity} />
+            {/* Filament glow */}
+            <Line points={pts} color="#f6a04d" lineWidth={1} transparent opacity={strength * 0.3} />
+            <Line points={pts} color="#ffcc66" lineWidth={2} transparent opacity={strength * 0.6} />
+            {/* Animated sparks */}
+            <Spark points={pts} speed={0.4 + i * 0.1} color="#ffee88" delay={i * 0.3} />
+            <Spark points={pts} speed={0.3 + i * 0.08} color="#f6a04d" delay={i * 0.3 + 1} />
+            {/* Target node */}
             <mesh position={tgtPos}>
-              <sphereGeometry args={[0.12]} />
-              <meshBasicMaterial color="#f6a04d" transparent opacity={opacity} />
+              <sphereGeometry args={[0.1]} />
+              <meshBasicMaterial color="#f6a04d" transparent opacity={strength} />
             </mesh>
           </group>
         )
       })}
+      {/* Source node - green pulse */}
       <mesh position={srcPos}>
         <sphereGeometry args={[0.15]} />
         <meshBasicMaterial color="#4df6a6" />
