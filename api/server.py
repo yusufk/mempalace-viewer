@@ -62,6 +62,38 @@ def search(query, limit=10):
     return hits
 
 
+def get_tunnels():
+    """Return rooms that connect across wings."""
+    from mempalace.palace_graph import find_tunnels
+    return find_tunnels()
+
+
+def find_similar(drawer_id, limit=8):
+    """Find drawers similar to a given drawer, across different rooms."""
+    source = col.get(ids=[drawer_id], include=["documents", "metadatas"])
+    if not source["documents"]:
+        return []
+    src_meta = source["metadatas"][0]
+    results = col.query(
+        query_texts=[source["documents"][0]],
+        n_results=limit + 5,
+        include=["metadatas", "distances"],
+    )
+    hits = []
+    for i in range(len(results["ids"][0])):
+        rid = results["ids"][0][i]
+        meta = results["metadatas"][0][i]
+        dist = results["distances"][0][i]
+        if rid == drawer_id:
+            continue
+        if meta["wing"] == src_meta["wing"] and meta["room"] == src_meta["room"]:
+            continue
+        hits.append({"id": rid, "wing": meta["wing"], "room": meta["room"], "distance": dist})
+        if len(hits) >= limit:
+            break
+    return {"source": {"id": drawer_id, "wing": src_meta["wing"], "room": src_meta["room"]}, "similar": hits}
+
+
 class Handler(BaseHTTPRequestHandler):
     def _cors(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -101,6 +133,14 @@ class Handler(BaseHTTPRequestHandler):
             self._json(search(q, limit=int(qs.get("limit", [10])[0])))
         elif url.path == "/api/stats":
             self._json({"total": col.count(), "structure": get_structure()})
+        elif url.path == "/api/tunnels":
+            self._json(get_tunnels())
+        elif url.path == "/api/similar":
+            did = qs.get("id", [""])[0]
+            if not did:
+                self._json({"error": "missing ?id="}, 400)
+                return
+            self._json(find_similar(did, limit=int(qs.get("limit", [8])[0])))
         else:
             self._json({"error": "not found"}, 404)
 

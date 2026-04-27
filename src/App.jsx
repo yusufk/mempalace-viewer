@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import Sidebar from './components/Sidebar'
 import PalaceView from './components/PalaceView'
 import DrawerPanel from './components/DrawerPanel'
@@ -15,7 +15,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [hidden, setHidden] = useState(new Set()) // "wing" or "wing/room"
+  const [hidden, setHidden] = useState(new Set())
+  const [connections, setConnections] = useState(null) // { source, similar }
+  const [showConnections, setShowConnections] = useState(true)
 
   useEffect(() => {
     fetch(`${API}/stats`).then(r => r.json()).then(setStats)
@@ -38,6 +40,14 @@ export default function App() {
     const res = await fetch(`${API}/search?q=${encodeURIComponent(q)}&limit=20`)
     setSearchResults(await res.json())
   }
+
+  const handleDrawerClick = useCallback(async (drawer) => {
+    setActiveDrawer(drawer)
+    if (showConnections && drawer.id) {
+      const res = await fetch(`${API}/similar?id=${encodeURIComponent(drawer.id)}&limit=8`)
+      setConnections(await res.json())
+    }
+  }, [showConnections])
 
   const toggleHidden = (key) => {
     setHidden(prev => {
@@ -83,7 +93,7 @@ export default function App() {
         onSearch={handleSearch}
         searchQuery={searchQuery}
         searchResults={searchResults}
-        onDrawerClick={setActiveDrawer}
+        onDrawerClick={handleDrawerClick}
         hidden={hidden}
         onToggleHidden={toggleHidden}
         onShowAll={() => setHidden(new Set())}
@@ -92,6 +102,8 @@ export default function App() {
           for (const wing of Object.keys(structure)) all.add(wing)
           setHidden(all)
         }}
+        showConnections={showConnections}
+        onToggleConnections={() => { setShowConnections(v => !v); if (showConnections) setConnections(null) }}
       />
       <main className={`main ${sidebarOpen ? '' : 'expanded'}`}>
         <PalaceView
@@ -99,11 +111,12 @@ export default function App() {
           selected={selected}
           onSelect={setSelected}
           drawers={visibleDrawers}
-          onDrawerClick={setActiveDrawer}
+          onDrawerClick={handleDrawerClick}
+          connections={showConnections ? connections : null}
         />
       </main>
       {activeDrawer && (
-        <DrawerPanel drawer={activeDrawer} onClose={() => setActiveDrawer(null)} />
+        <DrawerPanel drawer={activeDrawer} onClose={() => { setActiveDrawer(null); setConnections(null) }} />
       )}
     </div>
   )

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 
-export default function Sidebar({ open, onToggle, structure, stats, selected, onSelect, onSearch, searchQuery, searchResults, onDrawerClick, hidden, onToggleHidden, onShowAll, onHideAll }) {
+export default function Sidebar({ open, onToggle, structure, stats, selected, onSelect, onSearch, searchQuery, searchResults, onDrawerClick, hidden, onToggleHidden, onShowAll, onHideAll, showConnections, onToggleConnections }) {
   const [query, setQuery] = useState(searchQuery || '')
 
   const handleKey = (e) => {
@@ -52,6 +52,13 @@ export default function Sidebar({ open, onToggle, structure, stats, selected, on
         <div className="bulk-actions">
           <button onClick={onShowAll}>Show all</button>
           <button onClick={onHideAll}>Hide all</button>
+        </div>
+
+        <div className="connections-toggle">
+          <label className="vis-checkbox">
+            <input type="checkbox" checked={showConnections} onChange={onToggleConnections} />
+          </label>
+          <span>Show connections on click</span>
         </div>
 
         <div className="floor-list">
