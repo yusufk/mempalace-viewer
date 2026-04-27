@@ -253,52 +253,31 @@ function Floor({ floorIndex, wings, grouped, onDrawerClick, isSearch, totalFloor
   )
 }
 
-/* ── Connection lines between rooms ── */
-function ConnectionLines({ connections, structure }) {
-  const roomPositions = useMemo(() => {
-    const pos = {}
-    const wingNames = Object.keys(structure)
-    wingNames.forEach((wing, wi) => {
-      const fi = Math.floor(wi / 3)
-      const wIdx = wi % 3
-      const y = fi * FLOOR_H + 2
-      const roomNames = Object.keys(structure[wing] || {})
-      roomNames.forEach((room, ri) => {
-        let x, z
-        if (wIdx === 0) { x = -6 - ri * 5; z = 0 }
-        else if (wIdx === 1) { x = 6 + ri * 5; z = 0 }
-        else { x = (ri % 2 === 0 ? -2.5 : 2.5); z = -6 - Math.floor(ri / 2) * 5 }
-        pos[`${wing}/${room}`] = [x, y, z]
-      })
-    })
-    return pos
-  }, [structure])
-
-  if (!connections || !connections.similar) return null
-  const srcKey = `${connections.source.wing}/${connections.source.room}`
-  const srcPos = roomPositions[srcKey]
+/* ── Connection lines between drawers ── */
+function ConnectionLines({ connections, drawerPositions }) {
+  if (!connections || !connections.similar || !drawerPositions) return null
+  const srcPos = drawerPositions[connections.source.id]
   if (!srcPos) return null
 
   return (
     <group>
       {connections.similar.map((s, i) => {
-        const tgtKey = `${s.wing}/${s.room}`
-        const tgtPos = roomPositions[tgtKey]
+        const tgtPos = drawerPositions[s.id]
         if (!tgtPos) return null
-        const mid = [(srcPos[0] + tgtPos[0]) / 2, Math.max(srcPos[1], tgtPos[1]) + 5, (srcPos[2] + tgtPos[2]) / 2]
+        const mid = [(srcPos[0] + tgtPos[0]) / 2, Math.max(srcPos[1], tgtPos[1]) + 4, (srcPos[2] + tgtPos[2]) / 2]
         const opacity = Math.max(0.4, 1 - s.distance * 0.5)
         return (
           <group key={i}>
             <Line points={[srcPos, mid, tgtPos]} color="#f6a04d" lineWidth={3} transparent opacity={opacity} />
             <mesh position={tgtPos}>
-              <sphereGeometry args={[0.15]} />
+              <sphereGeometry args={[0.12]} />
               <meshBasicMaterial color="#f6a04d" transparent opacity={opacity} />
             </mesh>
           </group>
         )
       })}
       <mesh position={srcPos}>
-        <sphereGeometry args={[0.2]} />
+        <sphereGeometry args={[0.15]} />
         <meshBasicMaterial color="#4df6a6" />
       </mesh>
     </group>
@@ -318,7 +297,6 @@ function MansionScene({ structure, drawers, onDrawerClick, connections }) {
   const isSearch = drawers.length > 0 && drawers[0].distance !== undefined
   const wingNames = Object.keys(structure)
 
-  // Group wings into floors of 3
   const floors = useMemo(() => {
     const f = []
     for (let i = 0; i < wingNames.length; i += 3) {
@@ -326,6 +304,32 @@ function MansionScene({ structure, drawers, onDrawerClick, connections }) {
     }
     return f
   }, [wingNames, structure])
+
+  // Build drawer ID → world position map
+  const drawerPositions = useMemo(() => {
+    const pos = {}
+    const sp = 0.2, maxCols = 6, maxRows = 6, perLayer = maxCols * maxRows
+    wingNames.forEach((wing, wi) => {
+      const fi = Math.floor(wi / 3), wIdx = wi % 3, y = fi * FLOOR_H
+      const roomNames = Object.keys(structure[wing] || {})
+      roomNames.forEach((room, ri) => {
+        let rx, rz
+        if (wIdx === 0) { rx = -6 - ri * 5; rz = 0 }
+        else if (wIdx === 1) { rx = 6 + ri * 5; rz = 0 }
+        else { rx = (ri % 2 === 0 ? -2.5 : 2.5); rz = -6 - Math.floor(ri / 2) * 5 }
+        const baseX = rx - 1.3, baseY = y + 0.15, baseZ = rz - 1.3
+        const rd = grouped[`${wing}/${room}`] || []
+        rd.forEach((d, i) => {
+          const layer = Math.floor(i / perLayer)
+          const inLayer = i % perLayer
+          const col = inLayer % maxCols
+          const row = Math.floor(inLayer / maxCols)
+          pos[d.id] = [baseX + col * sp, baseY + layer * sp, baseZ + row * sp]
+        })
+      })
+    })
+    return pos
+  }, [wingNames, structure, grouped])
 
   return (
     <>
@@ -337,7 +341,7 @@ function MansionScene({ structure, drawers, onDrawerClick, connections }) {
       ))}
 
       <gridHelper args={[80, 80, '#071828', '#040e18']} position={[0, -0.02, 0]} />
-      <ConnectionLines connections={connections} structure={structure} />
+      <ConnectionLines connections={connections} drawerPositions={drawerPositions} />
       <OrbitControls makeDefault enableDamping dampingFactor={0.05} minDistance={3} maxDistance={60} target={[0, (floors.length - 1) * FLOOR_H / 2, 0]} />
     </>
   )
