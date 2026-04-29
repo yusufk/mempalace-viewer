@@ -386,7 +386,7 @@ function MansionScene({ structure, drawers, onDrawerClick, connections }) {
 
       <gridHelper args={[80, 80, '#071828', '#040e18']} position={[0, -0.02, 0]} />
       <ConnectionLines connections={connections} drawerPositions={drawerPositions} />
-      <OrbitControls makeDefault enableDamping dampingFactor={0.05} minDistance={3} maxDistance={60} target={[0, (floors.length - 1) * FLOOR_H / 2, 0]} />
+      <OrbitControls makeDefault enableDamping dampingFactor={0.05} minDistance={3} maxDistance={60} target={[0, (floors.length - 1) * FLOOR_H / 2, 0]} enablePan screenSpacePanning={false} panSpeed={1.5} rotateSpeed={0.8} mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.PAN }} />
     </>
   )
 }
