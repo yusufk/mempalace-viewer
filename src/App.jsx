@@ -25,14 +25,7 @@ export default function App() {
     fetch(`${API}/drawers?limit=2500`).then(r => r.json()).then(setDrawers)
   }, [])
 
-  useEffect(() => {
-    if (!selected) return
-    const params = new URLSearchParams()
-    if (selected.wing) params.set('wing', selected.wing)
-    if (selected.room) params.set('room', selected.room)
-    params.set('limit', '100')
-    fetch(`${API}/drawers?${params}`).then(r => r.json()).then(setDrawers)
-  }, [selected])
+  // Selection is now camera-only — drawers stay loaded via visibility toggles
 
   const handleSearch = async (q) => {
     setSearchQuery(q)
