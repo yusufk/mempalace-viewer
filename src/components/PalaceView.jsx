@@ -1,5 +1,5 @@
 import { useRef, useMemo, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls, Text, Line } from '@react-three/drei'
 import * as THREE from 'three'
 
@@ -328,7 +328,38 @@ function ConnectionLines({ connections, drawerPositions }) {
   )
 }
 
-function MansionScene({ structure, drawers, onDrawerClick, connections }) {
+/* ── Animate camera to selected room ── */
+function CameraTarget({ selected, structure }) {
+  const controls = useThree(s => s.controls)
+  const target = useMemo(() => {
+    if (!selected?.wing || !structure[selected.wing]) return null
+    const wingNames = Object.keys(structure)
+    const wi = wingNames.indexOf(selected.wing)
+    if (wi < 0) return null
+    const fi = Math.floor(wi / 3), wIdx = wi % 3, y = fi * FLOOR_H
+    if (!selected.room) {
+      // Wing selected — target the hallway entrance
+      if (wIdx === 0) return [-5, y + 1, 0]
+      if (wIdx === 1) return [5, y + 1, 0]
+      return [0, y + 1, -5]
+    }
+    const ri = Object.keys(structure[selected.wing]).indexOf(selected.room)
+    if (ri < 0) return null
+    let x, z
+    if (wIdx === 0) { x = -6 - ri * 5; z = 0 }
+    else if (wIdx === 1) { x = 6 + ri * 5; z = 0 }
+    else { x = (ri % 2 === 0 ? -2.5 : 2.5); z = -6 - Math.floor(ri / 2) * 5 }
+    return [x, y + 1, z]
+  }, [selected, structure])
+
+  useFrame(() => {
+    if (!target || !controls) return
+    controls.target.lerp(new THREE.Vector3(...target), 0.05)
+  })
+  return null
+}
+
+function MansionScene({ structure, drawers, onDrawerClick, connections, selected }) {
   const grouped = useMemo(() => {
     const g = {}
     for (const d of drawers) {
@@ -386,6 +417,7 @@ function MansionScene({ structure, drawers, onDrawerClick, connections }) {
 
       <gridHelper args={[80, 80, '#071828', '#040e18']} position={[0, -0.02, 0]} />
       <ConnectionLines connections={connections} drawerPositions={drawerPositions} />
+      <CameraTarget selected={selected} structure={structure} />
       <OrbitControls makeDefault enableDamping dampingFactor={0.05} minDistance={3} maxDistance={60} target={[0, (floors.length - 1) * FLOOR_H / 2, 0]} enablePan screenSpacePanning={false} panSpeed={1.5} rotateSpeed={0.8} mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.PAN }} />
     </>
   )
@@ -394,7 +426,7 @@ function MansionScene({ structure, drawers, onDrawerClick, connections }) {
 export default function PalaceView({ structure, selected, onSelect, drawers, onDrawerClick, connections }) {
   return (
     <Canvas camera={{ position: [0, 18, 25], fov: 50 }} gl={{ antialias: true, alpha: false }} onCreated={({ gl }) => gl.setClearColor('#000000')}>
-      <MansionScene structure={structure} drawers={drawers} onDrawerClick={onDrawerClick} connections={connections} />
+      <MansionScene structure={structure} drawers={drawers} onDrawerClick={onDrawerClick} connections={connections} selected={selected} />
     </Canvas>
   )
 }
