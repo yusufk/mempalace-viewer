@@ -1,6 +1,6 @@
 import { useRef, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Text, Line } from '@react-three/drei'
+import { OrbitControls, Text, Line, QuadraticBezierLine } from '@react-three/drei'
 import * as THREE from 'three'
 
 const B = '#4dc9f6'
@@ -328,38 +328,116 @@ function ConnectionLines({ connections, drawerPositions }) {
   )
 }
 
-/* ── Animate camera to selected room ── */
+/* ── Animate camera to selected room with zoom ── */
 function CameraTarget({ selected, structure }) {
+  const { camera } = useThree()
   const controls = useThree(s => s.controls)
-  const target = useMemo(() => {
-    if (!selected?.wing || !structure[selected.wing]) return null
+
+  const { target, cameraPos } = useMemo(() => {
+    if (!selected?.wing || !structure[selected.wing]) return { target: null, cameraPos: null }
     const wingNames = Object.keys(structure)
     const wi = wingNames.indexOf(selected.wing)
-    if (wi < 0) return null
+    if (wi < 0) return { target: null, cameraPos: null }
     const fi = Math.floor(wi / 3), wIdx = wi % 3, y = fi * FLOOR_H
+
     if (!selected.room) {
-      // Wing selected — target the hallway entrance
-      if (wIdx === 0) return [-5, y + 1, 0]
-      if (wIdx === 1) return [5, y + 1, 0]
-      return [0, y + 1, -5]
+      // Wing selected — overview of the wing from above
+      let tx, tz
+      if (wIdx === 0) { tx = -10; tz = 0 }
+      else if (wIdx === 1) { tx = 10; tz = 0 }
+      else { tx = 0; tz = -10 }
+      return {
+        target: [tx, y + 1, tz],
+        cameraPos: [tx + 6, y + 10, tz + 10]
+      }
     }
+
+    // Room selected — zoom to a close-up vantage above the room
     const ri = Object.keys(structure[selected.wing]).indexOf(selected.room)
-    if (ri < 0) return null
+    if (ri < 0) return { target: null, cameraPos: null }
     let x, z
     if (wIdx === 0) { x = -6 - ri * 5; z = 0 }
     else if (wIdx === 1) { x = 6 + ri * 5; z = 0 }
     else { x = (ri % 2 === 0 ? -2.5 : 2.5); z = -6 - Math.floor(ri / 2) * 5 }
-    return [x, y + 1, z]
+
+    // Camera positioned at a 45° angle looking down into the room
+    return {
+      target: [x, y + 0.5, z],
+      cameraPos: [x + 3, y + 4, z + 4]
+    }
   }, [selected, structure])
 
   useFrame(() => {
     if (!target || !controls) return
-    controls.target.lerp(new THREE.Vector3(...target), 0.05)
+    // Smoothly animate both the look-at target AND camera position
+    controls.target.lerp(new THREE.Vector3(...target), 0.06)
+    camera.position.lerp(new THREE.Vector3(...cameraPos), 0.06)
   })
   return null
 }
 
-function MansionScene({ structure, drawers, onDrawerClick, connections, selected }) {
+/* ── Tunnel arcs between wings ── */
+function TunnelLines({ tunnels, roomPositions }) {
+  if (!tunnels || !roomPositions || tunnels.length === 0) return null
+
+  return (
+    <group>
+      {tunnels.map((tunnel, i) => {
+        if (!tunnel.source || !tunnel.target) return null
+        const srcKey = `${tunnel.source.wing}/${tunnel.source.room}`
+        const tgtKey = `${tunnel.target.wing}/${tunnel.target.room}`
+        const srcPos = roomPositions[srcKey]
+        const tgtPos = roomPositions[tgtKey]
+        if (!srcPos || !tgtPos) return null
+
+        // Midpoint lifted high for a visible arc
+        const mid = [
+          (srcPos[0] + tgtPos[0]) / 2,
+          Math.max(srcPos[1], tgtPos[1]) + 4 + Math.abs(srcPos[0] - tgtPos[0]) * 0.15,
+          (srcPos[2] + tgtPos[2]) / 2,
+        ]
+
+        return (
+          <group key={tunnel.id || i}>
+            <QuadraticBezierLine
+              start={srcPos}
+              end={tgtPos}
+              mid={mid}
+              color="#d4a006"
+              lineWidth={3}
+              transparent
+              opacity={0.7}
+            />
+            {/* Endpoint markers */}
+            <mesh position={srcPos}>
+              <sphereGeometry args={[0.15]} />
+              <meshBasicMaterial color="#d4a006" transparent opacity={0.8} />
+            </mesh>
+            <mesh position={tgtPos}>
+              <sphereGeometry args={[0.15]} />
+              <meshBasicMaterial color="#d4a006" transparent opacity={0.8} />
+            </mesh>
+            {/* Label at midpoint */}
+            {tunnel.label && (
+              <Text
+                position={[mid[0], mid[1] + 0.3, mid[2]]}
+                fontSize={0.2}
+                color="#d4a006"
+                anchorX="center"
+                anchorY="bottom"
+                maxWidth={6}
+              >
+                {tunnel.label}
+              </Text>
+            )}
+          </group>
+        )
+      })}
+    </group>
+  )
+}
+
+function MansionScene({ structure, drawers, onDrawerClick, connections, selected, tunnels }) {
   const grouped = useMemo(() => {
     const g = {}
     for (const d of drawers) {
@@ -406,6 +484,23 @@ function MansionScene({ structure, drawers, onDrawerClick, connections, selected
     return pos
   }, [wingNames, structure, grouped])
 
+  // Build room → world center position map (for tunnel rendering)
+  const roomPositions = useMemo(() => {
+    const pos = {}
+    wingNames.forEach((wing, wi) => {
+      const fi = Math.floor(wi / 3), wIdx = wi % 3, y = fi * FLOOR_H
+      const roomNames = Object.keys(structure[wing] || {})
+      roomNames.forEach((room, ri) => {
+        let x, z
+        if (wIdx === 0) { x = -6 - ri * 5; z = 0 }
+        else if (wIdx === 1) { x = 6 + ri * 5; z = 0 }
+        else { x = (ri % 2 === 0 ? -2.5 : 2.5); z = -6 - Math.floor(ri / 2) * 5 }
+        pos[`${wing}/${room}`] = [x, y + 1.5, z]
+      })
+    })
+    return pos
+  }, [wingNames, structure])
+
   return (
     <>
       <ambientLight intensity={0.1} />
@@ -417,16 +512,17 @@ function MansionScene({ structure, drawers, onDrawerClick, connections, selected
 
       <gridHelper args={[80, 80, '#071828', '#040e18']} position={[0, -0.02, 0]} />
       <ConnectionLines connections={connections} drawerPositions={drawerPositions} />
+      <TunnelLines tunnels={tunnels} roomPositions={roomPositions} />
       <CameraTarget selected={selected} structure={structure} />
       <OrbitControls makeDefault enableDamping dampingFactor={0.05} minDistance={3} maxDistance={60} target={[0, (floors.length - 1) * FLOOR_H / 2, 0]} enablePan screenSpacePanning={false} panSpeed={1.5} rotateSpeed={0.8} mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.PAN }} />
     </>
   )
 }
 
-export default function PalaceView({ structure, selected, onSelect, drawers, onDrawerClick, connections }) {
+export default function PalaceView({ structure, selected, onSelect, drawers, onDrawerClick, connections, tunnels }) {
   return (
     <Canvas camera={{ position: [0, 18, 25], fov: 50 }} gl={{ antialias: true, alpha: false }} onCreated={({ gl }) => gl.setClearColor('#000000')}>
-      <MansionScene structure={structure} drawers={drawers} onDrawerClick={onDrawerClick} connections={connections} selected={selected} />
+      <MansionScene structure={structure} drawers={drawers} onDrawerClick={onDrawerClick} connections={connections} selected={selected} tunnels={tunnels} />
     </Canvas>
   )
 }

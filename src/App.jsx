@@ -18,11 +18,14 @@ export default function App() {
   const [hidden, setHidden] = useState(new Set())
   const [connections, setConnections] = useState(null) // { source, similar }
   const [showConnections, setShowConnections] = useState(true)
+  const [tunnels, setTunnels] = useState([])
+  const [showTunnels, setShowTunnels] = useState(true)
 
   useEffect(() => {
     fetch(`${API}/stats`).then(r => r.json()).then(setStats)
     fetch(`${API}/structure`).then(r => r.json()).then(setStructure)
     fetch(`${API}/drawers?limit=2500`).then(r => r.json()).then(setDrawers)
+    fetch(`${API}/tunnels`).then(r => r.json()).then(setTunnels).catch(() => setTunnels([]))
   }, [])
 
   // Selection is now camera-only — drawers stay loaded via visibility toggles
@@ -97,6 +100,9 @@ export default function App() {
         }}
         showConnections={showConnections}
         onToggleConnections={() => { setShowConnections(v => !v); if (showConnections) setConnections(null) }}
+        showTunnels={showTunnels}
+        onToggleTunnels={() => setShowTunnels(v => !v)}
+        tunnelCount={tunnels.length}
       />
       <main className={`main ${sidebarOpen ? '' : 'expanded'}`}>
         <PalaceView
@@ -106,6 +112,7 @@ export default function App() {
           drawers={visibleDrawers}
           onDrawerClick={handleDrawerClick}
           connections={showConnections ? connections : null}
+          tunnels={showTunnels ? tunnels : []}
         />
       </main>
       {activeDrawer && (

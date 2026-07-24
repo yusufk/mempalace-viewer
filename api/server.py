@@ -63,9 +63,9 @@ def search(query, limit=10):
 
 
 def get_tunnels():
-    """Return rooms that connect across wings."""
-    from mempalace.palace_graph import find_tunnels
-    return find_tunnels()
+    """Return explicit cross-wing tunnel connections."""
+    from mempalace.palace_graph import list_tunnels
+    return list_tunnels()
 
 
 def find_similar(drawer_id, limit=8):

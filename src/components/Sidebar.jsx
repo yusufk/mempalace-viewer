@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 
-export default function Sidebar({ open, onToggle, structure, stats, selected, onSelect, onSearch, searchQuery, searchResults, onDrawerClick, hidden, onToggleHidden, onShowAll, onHideAll, showConnections, onToggleConnections }) {
+export default function Sidebar({ open, onToggle, structure, stats, selected, onSelect, onSearch, searchQuery, searchResults, onDrawerClick, hidden, onToggleHidden, onShowAll, onHideAll, showConnections, onToggleConnections, showTunnels, onToggleTunnels, tunnelCount }) {
   const [query, setQuery] = useState(searchQuery || '')
 
   const handleKey = (e) => {
@@ -59,6 +59,13 @@ export default function Sidebar({ open, onToggle, structure, stats, selected, on
             <input type="checkbox" checked={showConnections} onChange={onToggleConnections} />
           </label>
           <span>Show connections on click</span>
+        </div>
+
+        <div className="connections-toggle">
+          <label className="vis-checkbox">
+            <input type="checkbox" checked={showTunnels} onChange={onToggleTunnels} />
+          </label>
+          <span>Show tunnels ({tunnelCount || 0})</span>
         </div>
 
         <div className="floor-list">
