@@ -1,7 +1,9 @@
 """MemPalace Viewer API — serves palace data from ChromaDB."""
 import json
 import os
+import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 
 import chromadb
@@ -12,19 +14,39 @@ PORT = int(os.environ.get("API_PORT", "3001"))
 client = chromadb.PersistentClient(path=PALACE_PATH)
 col = client.get_collection("mempalace_drawers")
 
+# Simple cache for structure (expensive to compute with 57K+ drawers)
+_structure_cache = {"data": None, "ts": 0}
+CACHE_TTL = 300  # 5 minutes
+
 
 def get_structure():
-    """Return wings → rooms → counts."""
-    all_meta = col.get(include=["metadatas"])["metadatas"]
+    """Return wings → rooms → counts (paginated, cached)."""
+    now = time.time()
+    if _structure_cache["data"] and (now - _structure_cache["ts"]) < CACHE_TTL:
+        return _structure_cache["data"]
+
     tree = {}
-    for m in all_meta:
-        w, r = m.get("wing", "unknown"), m.get("room", "unknown")
-        tree.setdefault(w, {}).setdefault(r, 0)
-        tree[w][r] += 1
+    batch_size = 5000
+    offset = 0
+    while True:
+        batch = col.get(include=["metadatas"], limit=batch_size, offset=offset)
+        metas = batch["metadatas"]
+        if not metas:
+            break
+        for m in metas:
+            w, r = m.get("wing", "unknown"), m.get("room", "unknown")
+            tree.setdefault(w, {}).setdefault(r, 0)
+            tree[w][r] += 1
+        if len(metas) < batch_size:
+            break
+        offset += batch_size
+
+    _structure_cache["data"] = tree
+    _structure_cache["ts"] = now
     return tree
 
 
-def get_drawers(wing=None, room=None, limit=2500, offset=0):
+def get_drawers(wing=None, room=None, limit=500, offset=0):
     """Return drawers with content, optionally filtered."""
     where = {}
     if wing and room:
@@ -148,6 +170,10 @@ class Handler(BaseHTTPRequestHandler):
         pass  # quiet
 
 
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+
+
 if __name__ == "__main__":
     print(f"MemPalace API on http://localhost:{PORT} (palace: {PALACE_PATH})")
-    HTTPServer(("", PORT), Handler).serve_forever()
+    ThreadedHTTPServer(("", PORT), Handler).serve_forever()
