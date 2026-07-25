@@ -85,9 +85,21 @@ def search(query, limit=10):
 
 
 def get_tunnels():
-    """Return explicit cross-wing tunnel connections."""
-    from mempalace.palace_graph import list_tunnels
-    return list_tunnels()
+    """Return explicit cross-wing tunnel connections from closets."""
+    try:
+        closets = client.get_collection("mempalace_closets")
+        results = closets.get(where={"type": "tunnel"}, include=["metadatas"])
+        tunnels = []
+        for i, meta in enumerate(results["metadatas"]):
+            tunnels.append({
+                "id": results["ids"][i],
+                "label": meta.get("label", ""),
+                "source": {"wing": meta.get("source_wing", ""), "room": meta.get("source_room", "")},
+                "target": {"wing": meta.get("target_wing", ""), "room": meta.get("target_room", "")},
+            })
+        return tunnels
+    except Exception:
+        return []
 
 
 def find_similar(drawer_id, limit=8):
@@ -106,11 +118,11 @@ def find_similar(drawer_id, limit=8):
         rid = results["ids"][0][i]
         meta = results["metadatas"][0][i]
         dist = results["distances"][0][i]
-        if rid == drawer_id:
+        if not meta or rid == drawer_id:
             continue
-        if meta["wing"] == src_meta["wing"] and meta["room"] == src_meta["room"]:
+        if meta.get("wing") == src_meta.get("wing") and meta.get("room") == src_meta.get("room"):
             continue
-        hits.append({"id": rid, "wing": meta["wing"], "room": meta["room"], "distance": dist})
+        hits.append({"id": rid, "wing": meta.get("wing","?"), "room": meta.get("room","?"), "distance": dist})
         if len(hits) >= limit:
             break
     return {"source": {"id": drawer_id, "wing": src_meta["wing"], "room": src_meta["room"]}, "similar": hits}

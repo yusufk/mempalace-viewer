@@ -134,14 +134,18 @@ function DrawerCube({ position, drawer, onClick, isSearch, activeId }) {
   const [hovered, setHovered] = useState(false)
   const isActive = drawer.id === activeId
   const color = isActive ? '#4df6a6' : isSearch ? '#4df6a6' : B
+
+  // Only run useFrame when hovered or active (not idle)
+  const needsAnim = hovered || isActive
   useFrame(() => {
-    if (!ref.current) return
+    if (!ref.current || !needsAnim) return
     const s = hovered ? 1.5 : isActive ? 1.8 : 1
     ref.current.scale.lerp(new THREE.Vector3(s, s, s), 0.15)
     ref.current.material.emissiveIntensity = THREE.MathUtils.lerp(ref.current.material.emissiveIntensity, isActive ? 2.5 : hovered ? 1.5 : 0.25, 0.1)
   })
+
   return (
-    <mesh ref={ref} position={position} onClick={e => { e.stopPropagation(); onClick(drawer) }} onPointerOver={() => setHovered(true)} onPointerOut={() => setHovered(false)}>
+    <mesh ref={ref} position={position} onClick={e => { e.stopPropagation(); onClick(drawer) }} onPointerOver={() => setHovered(true)} onPointerOut={() => { setHovered(false); if (ref.current) { ref.current.scale.set(1,1,1); ref.current.material.emissiveIntensity = 0.25 } }}>
       <boxGeometry args={[0.12, 0.12, 0.12]} />
       <meshStandardMaterial color={hovered ? '#fff' : color} emissive={color} emissiveIntensity={0.25} transparent opacity={hovered ? 0.95 : 0.65} wireframe={!hovered} />
     </mesh>
@@ -332,6 +336,20 @@ function ConnectionLines({ connections, drawerPositions }) {
 function CameraTarget({ selected, structure }) {
   const { camera } = useThree()
   const controls = useThree(s => s.controls)
+  const userInteracting = useRef(false)
+  const arrived = useRef(false)
+
+  // Reset when selection changes
+  useMemo(() => { arrived.current = false; userInteracting.current = false }, [selected])
+
+  // Detect user orbit/pan — stop auto-camera
+  useFrame(() => {
+    if (controls && !userInteracting.current) {
+      const onStart = () => { userInteracting.current = true }
+      controls.addEventListener('start', onStart)
+      return () => controls.removeEventListener('start', onStart)
+    }
+  })
 
   const { target, cameraPos } = useMemo(() => {
     if (!selected?.wing || !structure[selected.wing]) return { target: null, cameraPos: null }
@@ -341,7 +359,6 @@ function CameraTarget({ selected, structure }) {
     const fi = Math.floor(wi / 3), wIdx = wi % 3, y = fi * FLOOR_H
 
     if (!selected.room) {
-      // Wing selected — overview of the wing from above
       let tx, tz
       if (wIdx === 0) { tx = -10; tz = 0 }
       else if (wIdx === 1) { tx = 10; tz = 0 }
@@ -352,7 +369,6 @@ function CameraTarget({ selected, structure }) {
       }
     }
 
-    // Room selected — zoom to a close-up vantage above the room
     const ri = Object.keys(structure[selected.wing]).indexOf(selected.room)
     if (ri < 0) return { target: null, cameraPos: null }
     let x, z
@@ -360,7 +376,6 @@ function CameraTarget({ selected, structure }) {
     else if (wIdx === 1) { x = 6 + ri * 5; z = 0 }
     else { x = (ri % 2 === 0 ? -2.5 : 2.5); z = -6 - Math.floor(ri / 2) * 5 }
 
-    // Camera positioned at a 45° angle looking down into the room
     return {
       target: [x, y + 0.5, z],
       cameraPos: [x + 3, y + 4, z + 4]
@@ -368,10 +383,13 @@ function CameraTarget({ selected, structure }) {
   }, [selected, structure])
 
   useFrame(() => {
-    if (!target || !controls) return
-    // Smoothly animate both the look-at target AND camera position
+    if (!target || !controls || userInteracting.current || arrived.current) return
     controls.target.lerp(new THREE.Vector3(...target), 0.06)
     camera.position.lerp(new THREE.Vector3(...cameraPos), 0.06)
+    // Stop once close enough
+    if (camera.position.distanceTo(new THREE.Vector3(...cameraPos)) < 0.1) {
+      arrived.current = true
+    }
   })
   return null
 }

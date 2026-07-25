@@ -39,6 +39,8 @@ export default function App() {
 
   const handleDrawerClick = useCallback(async (drawer) => {
     setActiveDrawer(drawer)
+    // Navigate camera to the drawer's room
+    setSelected({ wing: drawer.wing, room: drawer.room })
     if (showConnections && drawer.id) {
       const res = await fetch(`${API}/similar?id=${encodeURIComponent(drawer.id)}&limit=8`)
       setConnections(await res.json())
@@ -116,7 +118,7 @@ export default function App() {
         />
       </main>
       {activeDrawer && (
-        <DrawerPanel drawer={activeDrawer} onClose={() => { setActiveDrawer(null); setConnections(null) }} />
+        <DrawerPanel drawer={activeDrawer} onClose={() => { setActiveDrawer(null) }} />
       )}
     </div>
   )
