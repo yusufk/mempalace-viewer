@@ -30,6 +30,35 @@ body {
   height: 100vh;
 }
 
+/* API status overlays */
+.api-error,
+.api-loading {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 10px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.api-error {
+  border-color: var(--danger);
+  color: var(--danger);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 70vw;
+}
+
+.api-error-hint { color: var(--text-dim); }
+.api-error code { color: var(--accent); }
+.api-loading { color: var(--text-dim); }
+
 /* Sidebar */
 .sidebar {
   width: var(--sidebar-w);

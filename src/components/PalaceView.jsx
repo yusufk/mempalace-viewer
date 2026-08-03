@@ -1,7 +1,20 @@
 import { useRef, useMemo, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Text, Line, QuadraticBezierLine } from '@react-three/drei'
+import { OrbitControls, Text as DreiText, Line, QuadraticBezierLine } from '@react-three/drei'
+import { preloadFont } from 'troika-three-text'
 import * as THREE from 'three'
+
+// Without an explicit font, troika resolves one from the jsDelivr CDN. If that
+// host is unreachable (offline, blocked network) typesetting rejects and the
+// whole scene silently renders nothing. Ship the font locally instead —
+// JetBrains Mono covers Latin, Cyrillic and Greek, so the unicode fallback
+// resolver never needs the network either.
+const FONT = `${import.meta.env.BASE_URL}fonts/JetBrainsMono-Regular.ttf`
+preloadFont({ font: FONT }, () => {})
+
+function Text(props) {
+  return <DreiText font={FONT} {...props} />
+}
 
 const B = '#4dc9f6'
 const BD = '#0d3a5a'
