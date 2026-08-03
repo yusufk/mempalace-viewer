@@ -16,54 +16,102 @@ A 3D blueprint-style viewer for [MemPalace](https://github.com/milla-jovovich/me
 ## Architecture
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌──────────────────┐
-│  React +    │────▶│  API Server  │────▶│  ChromaDB Palace │
-│  Three.js   │     │  (Python)    │     │  (~/.mempalace/) │
-│  Frontend   │◀────│  port 3001   │◀────│                  │
-└─────────────┘     └──────────────┘     └──────────────────┘
+┌─────────────┐     ┌──────────────┐     ┌──────────────────────┐
+│  React +    │────▶│  API Server  │────▶│  mcp   → MemPalace   │
+│  Three.js   │     │  (Python)    │     │          MCP server  │
+│  Frontend   │◀────│  port 3001   │◀────│  local → ChromaDB    │
+└─────────────┘     └──────────────┘     └──────────────────────┘
 ```
 
 - **Frontend**: React + [@react-three/fiber](https://github.com/pmndrs/react-three-fiber) + [@react-three/drei](https://github.com/pmndrs/drei)
-- **API**: Simple Python HTTP server that reads from the ChromaDB palace
-- **Data**: MemPalace ChromaDB database (created by `mempalace mine`)
+- **API**: Python HTTP server with two interchangeable backends
+- **Data**: a MemPalace palace, local or remote
+
+### Backends
+
+| `PALACE_BACKEND` | Talks to                         | Use when                                                                                                  |
+|------------------|----------------------------------|-----------------------------------------------------------------------------------------------------------|
+| `mcp` (default)  | A MemPalace MCP server over HTTP | The palace lives on another machine, reached through an SSH tunnel. Nothing but Python is needed locally. |
+| `local`          | The ChromaDB palace directory    | The palace is on this filesystem and `chromadb` is installed.                                             |
 
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) 18+
-- [Python](https://python.org/) 3.10+ with `mempalace` installed (`pip install mempalace`)
-- A mined MemPalace at `~/.mempalace/palace/`
+- [Python](https://python.org/) 3.10+ (`chromadb` only for the `local` backend)
+- A mined MemPalace — local, or an MCP server you can reach
 
-## Quick Start
+## Quick Start — remote palace over SSH (default)
+
+The palace runs on a server; only its MCP port is forwarded.
 
 ```bash
-# Install dependencies
+# 1. Tunnel the MCP port. Keep this window open.
+ssh -N -L 9000:127.0.0.1:9000 user@your-server
+
+# 2. API server — connects to http://127.0.0.1:9000/mcp
+python api/server.py          # Windows: scripts\start-api.bat
+
+# 3. Dev server
 npm install
-
-# Start the API server (reads from ~/.mempalace/palace)
-python api/server.py &
-
-# Start the dev server
 npm run dev
 ```
 
-Open http://localhost:5173
+Open http://localhost:5173. Vite proxies `/api` to the API server, so the
+browser stays same-origin and no CORS setup is needed.
+
+## Quick Start — local palace
+
+```bash
+PALACE_BACKEND=local PALACE_PATH=~/.mempalace/palace python api/server.py
+npm run dev
+```
 
 ## Configuration
 
-The API server reads from `~/.mempalace/palace` by default. Override with environment variables:
+| Variable          | Default                     | Meaning                                       |
+|-------------------|-----------------------------|-----------------------------------------------|
+| `PALACE_BACKEND`  | `mcp`                       | `mcp` or `local`                              |
+| `MEMPALACE_MCP`   | `http://127.0.0.1:9000/mcp` | MCP endpoint (`mcp` backend)                  |
+| `PALACE_PATH`     | `~/.mempalace/palace`       | Palace directory (`local` backend)            |
+| `API_PORT`        | `3001`                      | API listen port                               |
+| `CACHE_TTL`       | `300`                       | Seconds before the drawer cache is re-fetched |
+| `VITE_API_TARGET` | `http://127.0.0.1:3001`     | Proxy target for `npm run dev`                |
+| `VITE_API_URL`    | `/api`                      | Bypass the proxy and call an API directly     |
 
-```bash
-PALACE_PATH=/path/to/palace API_PORT=3001 python api/server.py
-```
+Start with `GET /api/health` — it reports the backend, the endpoint and the
+connected MCP server version. That is the fastest way to tell a dead tunnel
+apart from an empty palace.
 
 ## API Endpoints
 
-| Endpoint | Description |
-|---|---|
-| `GET /api/stats` | Total drawer count + wing/room structure |
-| `GET /api/structure` | Wing → room → count tree |
-| `GET /api/drawers?wing=&room=&limit=` | List drawers, optionally filtered |
-| `GET /api/search?q=&limit=` | Semantic search across all memories |
+| Endpoint                                      | Description                                     |
+|-----------------------------------------------|-------------------------------------------------|
+| `GET /api/health`                             | Backend, endpoint, connected server, cache size |
+| `GET /api/stats`                              | Drawer count + wing/room structure              |
+| `GET /api/structure`                          | Wing → room → count tree                        |
+| `GET /api/drawers?wing=&room=&limit=&offset=` | List drawers (content is a preview)             |
+| `GET /api/drawer?id=`                         | One drawer with its full content                |
+| `GET /api/search?q=&limit=`                   | Semantic search across all memories             |
+| `GET /api/similar?id=&limit=`                 | Drawers similar to one drawer, other rooms only |
+| `GET /api/tunnels`                            | Explicit cross-wing tunnels                     |
+| `GET /api/refresh`                            | Force a drawer cache reload                     |
+
+## Notes on the MCP backend
+
+- `mempalace_list_drawers` pages at 100 per call, so the whole drawer list is
+  cached in memory (`CACHE_TTL`) and search hits are rejoined to real drawer ids
+  via `(wing, room, filed_at)`.
+- Drawer counts differ by design: `stats.total` counts raw records including
+  chunks, `stats.listed` counts the parent drawers actually rendered.
+- List responses carry a ~200 char preview; the full text is fetched per drawer
+  when you click one.
+
+## Offline / blocked networks
+
+3D labels use a bundled copy of JetBrains Mono (`public/fonts/`). Without an
+explicit font, troika-three-text resolves one from the jsDelivr CDN — and if
+that host is unreachable, typesetting fails and the entire scene renders
+nothing at all, with no error in the console.
 
 ## License
 

@@ -2,9 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import Sidebar from './components/Sidebar'
 import PalaceView from './components/PalaceView'
 import DrawerPanel from './components/DrawerPanel'
+import { api } from './api'
 import './App.css'
-
-const API = 'http://localhost:3001/api'
 
 export default function App() {
   const [structure, setStructure] = useState({})
@@ -20,12 +19,31 @@ export default function App() {
   const [showConnections, setShowConnections] = useState(true)
   const [tunnels, setTunnels] = useState([])
   const [showTunnels, setShowTunnels] = useState(true)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${API}/stats`).then(r => r.json()).then(setStats)
-    fetch(`${API}/structure`).then(r => r.json()).then(setStructure)
-    fetch(`${API}/drawers?limit=2500`).then(r => r.json()).then(setDrawers)
-    fetch(`${API}/tunnels`).then(r => r.json()).then(setTunnels).catch(() => setTunnels([]))
+    let cancelled = false
+    ;(async () => {
+      try {
+        const [s, struct, ds] = await Promise.all([api.stats(), api.structure(), api.drawers(2500)])
+        if (cancelled) return
+        setStats(s)
+        setStructure(struct)
+        setDrawers(ds)
+        setError(null)
+      } catch (e) {
+        if (!cancelled) setError(e.message)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+      // Tunnels are optional — a palace with none is normal.
+      try {
+        const t = await api.tunnels()
+        if (!cancelled) setTunnels(Array.isArray(t) ? t : [])
+      } catch { if (!cancelled) setTunnels([]) }
+    })()
+    return () => { cancelled = true }
   }, [])
 
   // Selection is now camera-only — drawers stay loaded via visibility toggles
@@ -33,17 +51,30 @@ export default function App() {
   const handleSearch = async (q) => {
     setSearchQuery(q)
     if (!q.trim()) { setSearchResults(null); return }
-    const res = await fetch(`${API}/search?q=${encodeURIComponent(q)}&limit=20`)
-    setSearchResults(await res.json())
+    try {
+      setSearchResults(await api.search(q, 20))
+      setError(null)
+    } catch (e) {
+      setError(e.message)
+    }
   }
 
   const handleDrawerClick = useCallback(async (drawer) => {
     setActiveDrawer(drawer)
     // Navigate camera to the drawer's room
     setSelected({ wing: drawer.wing, room: drawer.room })
-    if (showConnections && drawer.id) {
-      const res = await fetch(`${API}/similar?id=${encodeURIComponent(drawer.id)}&limit=8`)
-      setConnections(await res.json())
+    if (!drawer.id) return
+    // The list only carries a preview — pull the full text for the panel.
+    if (drawer.preview || !drawer.content) {
+      try {
+        const full = await api.drawer(drawer.id)
+        setActiveDrawer(prev => (prev?.id === drawer.id ? { ...prev, ...full, preview: false } : prev))
+      } catch { /* keep the preview */ }
+    }
+    if (showConnections) {
+      try {
+        setConnections(await api.similar(drawer.id, 8))
+      } catch { setConnections(null) }
     }
   }, [showConnections])
 
@@ -107,6 +138,16 @@ export default function App() {
         tunnelCount={tunnels.length}
       />
       <main className={`main ${sidebarOpen ? '' : 'expanded'}`}>
+        {error && (
+          <div className="api-error">
+            <strong>API unreachable</strong>
+            <span>{error}</span>
+            <span className="api-error-hint">
+              Is the tunnel up and <code>python api/server.py</code> running on {api.base}?
+            </span>
+          </div>
+        )}
+        {loading && !error && <div className="api-loading">loading palace…</div>}
         <PalaceView
           structure={visibleStructure}
           selected={selected}

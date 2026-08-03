@@ -1,10 +1,12 @@
 export default function DrawerPanel({ drawer, onClose }) {
   const filed = drawer.filed_at ? new Date(drawer.filed_at).toLocaleString() : 'unknown'
+  // source_file may be a POSIX or a Windows path depending on where it was mined.
+  const title = drawer.source_file?.split(/[\\/]/).pop() || 'Drawer'
 
   return (
     <div className="drawer-panel">
-      <div className="drawer-panel-header">
-        <h3>{drawer.source_file?.split('/').pop() || 'Drawer'}</h3>
+      <div className="drawer-panel-header" title={drawer.source_file || ''}>
+        <h3>{title}</h3>
         <button className="drawer-panel-close" onClick={onClose}>✕</button>
       </div>
       <div className="drawer-panel-meta">
