@@ -85,20 +85,12 @@ def search(query, limit=10):
 
 
 def get_tunnels():
-    """Return explicit cross-wing tunnel connections from closets."""
+    """Return explicit cross-wing tunnel connections from tunnels.json."""
+    tunnels_path = os.path.join(os.path.dirname(PALACE_PATH), "tunnels.json")
     try:
-        closets = client.get_collection("mempalace_closets")
-        results = closets.get(where={"type": "tunnel"}, include=["metadatas"])
-        tunnels = []
-        for i, meta in enumerate(results["metadatas"]):
-            tunnels.append({
-                "id": results["ids"][i],
-                "label": meta.get("label", ""),
-                "source": {"wing": meta.get("source_wing", ""), "room": meta.get("source_room", "")},
-                "target": {"wing": meta.get("target_wing", ""), "room": meta.get("target_room", "")},
-            })
-        return tunnels
-    except Exception:
+        with open(tunnels_path, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
         return []
 
 
